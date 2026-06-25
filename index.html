@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Comptage de stock Moonshine</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=..." rel="stylesheet">
+
+  <!-- Librairie pour générer le PDF — à ajouter quand on fera cette étape -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root
+        {
+            --bg:#0A0A12;
+            --bg2:#13131F;
+            --text:#EDEDF5;
+            --muted:#74748C;
+            --cyan:#4DEEDB;
+            --amber:#FFB23F;
+            --pink:#FF4D8D;
+            --violet:#B38CFF;
+            --gold:#FFD66B;
+            --red:#FF6B4D;
+            --green:#5CFFB0;
+        }
+        .tabs
+        {
+            display:flex;
+            gap:8px;
+            overflow-x:auto;
+            padding:8px 0 4px;
+        }
+
+        .tabs::-webkit-scrollbar{ display:none; }
+
+        .tab
+        {
+            flex:0 0 auto;
+            padding:7px 14px;
+            border-radius:20px;
+            font-size:0.8rem;
+            border:1px solid rgba(255,255,255,0.1);
+            background:var(--bg2);
+            color:var(--muted);
+            white-space:nowrap;
+        }
+
+        .tab.active
+        {
+            background:var(--cyan);
+            color:#06141F;
+            border-color:var(--cyan);
+        }
+
+        .hidden
+        {
+            display:none;
+        }
+
+        *{ box-sizing:border-box;}
+
+        body 
+        {
+            margin:0;
+            background:var(--bg);
+            color:var(--text);
+            font-family: 'JetBrains Mono',monospace;
+            padding-bottom:96px; 
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        header
+        {
+            padding:20px 16px 4px;
+            position:sticky;
+            top:0;
+            background:var(--bg);
+            z-index:5;
+        }
+        H1
+        {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight:700;
+            font-size:1.4rem;
+            margin:0 0 8px;
+        }
+
+        .card 
+        {
+            background:var(--bg2);
+            border-radius:12px;
+            border:1px solid rgba(255,255,255,0.6);
+            border:2px solid var(--accent);
+            box-shadow:-4px 0 14px -8px var(--accent);
+            padding:14px 14px 12px;
+            margin-bottom: 12px;
+        }
+        
+        .card h3
+        {
+            font-family: 'Space Grostek', sans-serif;
+            font-weight:700;
+            font-size:1.02rem;
+            margin:0 0 12px;
+        }
+
+        .stepper-row 
+        {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:6px 0;
+            font-size:0.8rem;
+            color:var(--muted);
+        }
+
+        .stepper
+        {
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+
+        .step-btn
+        {
+            width:32px;
+            height:32px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,0.1);
+            background:var(--bg);
+            color:var(--text);
+            font-size:1.05rem;
+            font-family:'JetBrains Mono', monospace;
+        }
+
+        .step-btn:active
+        {
+            border-color:var(--accent);
+            box-shadow:0 0 8px var(--accent);
+            color:var(--accent);
+        }
+
+        .step-val
+        {
+            min-width:20px;
+            text-align:center;
+            font-size:0.92rem;
+        }
+
+        .total-window
+        {
+            margin-top:10px;
+            background:#0D0D16;
+            border-radius:8px;
+            padding:9px 12px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .total-label
+        {
+            font-size:0.62rem;
+            color:var(--muted);
+            text-transform:uppercase;
+            letter-spacing:0.1px;
+        }
+
+        .total-value
+        {
+            font-family:'JetBrains Mono', monospace;
+            font-weight:700;
+            font-size:1.3rem;
+            letter-spacing:0.04rem;
+            color:var(--accent);
+            text-shadow:0 0 10px var(--accent);
+        }
+        .bottom-bar
+        {
+            position:fixed;
+            bottom:0;
+            left:0;
+            right:0;
+            padding:12px 16px;
+           
+        }
+        
+        .generate-btn
+        {
+            width:100%;
+            background:var(--cyan);
+            color:#06141F;
+            border:none;
+            border-radius:12px;
+            padding:15px;
+            font-family:'Space Grotesk', sans-serif;
+            font-weight:700;
+            font-size:0.95rem;
+            box-shadow:0 0 16px rgba(77,238,219,0.35);
+        }
+
+        #progressBar
+        {
+            display:flex;
+            gap:2px;
+            height:4px;
+            padding:0 16px;
+            margin-bottom:8px;
+        }
+
+        .progress-seg
+        {
+            flex:1;
+            border-radius:2px;
+            background:#1F1F2E;
+        }
+
+        .progress-seg.on
+        {
+            background:var(--cyan);
+            box-shadow:0 0 4px var(--cyan);
+        }
+        .reset-btn
+        {
+            width:100%;
+            background:var(--red);
+            color:#1A0A0A;
+            border:none;
+            border-radius:12px;
+            padding:15px;
+            font-family:'Space Grotesk', sans-serif;
+            font-weight:700;
+            font-size:0.95rem;
+            margin-top:8px;
+        }
+    </style> 
+
+    <body> 
+
+        <header>
+            <h1>Comptage stock</h1>
+            <div id="progressTag">0 / 0 produits comptés</div>
+            <div class="tabs" id="tabs"></div>
+            <div id="progressBar"></div>
+        </header>
+
+        <main id="cardList"></main>
+
+        <div class="bottom-bar">
+            <button class="generate-btn" onclick="partager()">Générer PDF</button>
+            <button class="reset-btn" onclick="remiseAZero()">Remise à zéro</button>
+        </div>
+        <script>
+    // 1. Données — tableau "produits"
+    let produits = [
+        { id : 1, nom : 'Coca Cola', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 2, nom : 'Coca Cola Zero', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 3, nom : 'Fanta', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 4, nom : 'Sprite', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 5, nom : 'Jus Orange', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 6, nom : 'Jus de Pomme', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 7, nom : 'Fuze Tea', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 8, nom : 'Red Bull', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 9, nom : 'Red Bull Red', categorie : 'Softs', packSize : 24, packs : 0, unites : 0 },
+        { id : 10, nom : 'Fever Tree Bleu', categorie : 'Softs', packSize: 12, packs: 0, unites: 0 },
+        { id : 11, nom : 'Fever Tree Rouge', categorie : 'Softs', packSize: 12, packs: 0, unites: 0 },
+        { id : 12, nom : 'Fever Tree Vert', categorie : 'Softs', packSize: 12, packs: 0, unites: 0 },
+        { id : 13, nom : 'Eau plate', categorie : 'Softs', packSize: 24, packs: 0, unites: 0 },
+        { id : 14, nom : 'Eau pettilante', categorie : 'Softs', packSize: 24, packs: 0, unites: 0 },
+        //Bieres
+        { id : 15, nom : 'Salitos', categorie : 'Bières', packSize: 24, packs: 0, unites: 0 },
+        { id : 16, nom : 'Bertinchamps 0%', categorie : 'Bières', packSize: 24, packs: 0, unites: 0 },
+        { id : 17, nom : 'Bertinchamps 0% Passion', categorie : 'Bières', packSize: 24, packs: 0, unites: 0 },
+        { id : 18, nom : 'Popette', categorie : 'Bières', packSize: 12, packs: 0, unites: 0 },
+        //Cockatails
+        { id : 19, nom : 'Mojito Perno', categorie : 'Cocktails', unites: 0 },
+        { id : 20, nom : 'Mojito 0%', categorie : 'Cocktails', unites: 0 },
+        { id : 21, nom : 'Pornstar Martini', categorie : 'Cocktails', unites: 0 },
+        { id : 22, nom : 'Basil Smash', categorie : 'Cocktails', unites: 0 },
+        //Vin & Champagnes
+        { id : 23, nom : 'Rouge', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 24, nom : 'Rosé', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 25, nom : 'Blanc', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 26, nom : 'Rosé Magnum', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 27, nom : 'Blanc Magnum', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 28, nom : 'Pouilly Blanc', categorie : 'Vins', packSize : 6, packs: 0, unites: 0 },
+        { id : 29, nom : 'Prosecco', categorie : 'Vins', packSize: 6, packs: 0, unites: 0 },
+        { id : 30, nom : 'Champagne', categorie : 'Champagnes', packSize : 6, packs: 0, unites: 0 },
+        //Spiritueux
+        { id : 31, nom : 'Gin Malfy', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 32, nom : 'Vodka 1L', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 33, nom : 'Rhum 1L', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 34, nom : 'Whisky', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 35, nom : 'Gin Monkey', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 36, nom : 'Vodka 70cl', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        { id : 37, nom : 'Rhum 70cl', categorie : 'Spiritueux', packSize : 6, packs: 0, unites: 0 },
+        //Futs 
+        { id : 38, nom : 'Legere', categorie : 'Fûts', unites: 0 },
+        { id : 39, nom : 'Pamplemousse', categorie : 'Fûts', unites: 0 },
+        { id : 40, nom : 'IPA', categorie : 'Fûts', unites: 0 },
+        { id : 41, nom : 'Triple', categorie : 'Fûts', unites: 0 },
+        { id : 42, nom : 'Lillet', categorie : 'Fûts', unites: 0 },
+        { id : 43, nom : 'Spritz', categorie : 'Fûts', unites: 0 }   
+    ];
+    // 2. Génération de l'interface — genererInterface(), creerCarte()
+
+    const categoryColors=
+    {
+        'Softs':'var(--cyan)',
+        'Bières':'var(--amber)',
+        'Cocktails':'var(--pink)',
+        'Vins':'var(--violet)',
+        'Champagnes':'var(--gold)',
+        'Spiritueux':'var(--red)',
+        'Fûts':'var(--green)'
+    };
+
+    function genererInterface() 
+    {
+        const container = document.getElementById('cardList');
+        container.innerHTML = ''; 
+        const categories = [... new Set(produits.map(p=>p.categorie))];
+
+        categories.forEach(categorie => 
+        {
+            const titre = document.createElement('div');
+            titre.className = 'category-label';
+            titre.textContent = categorie;
+            titre.dataset.categorie = categorie;
+            container.appendChild(titre);
+
+            produits.filter(p => p.categorie === categorie).forEach(p => 
+            {
+                container.appendChild(creerCarte(p));
+            });
+        });
+
+        mettreAJourProgression();
+    }
+
+    function creerCarte(produit) 
+    {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.categorie = produit.categorie;
+        card.style.setProperty('--accent', categoryColors[produit.categorie] || 'var(--cyan)');
+
+        const ligneStepperPacks = produit.packSize ? `
+        <div class="stepper-row">
+            <span id="p${produit.id}-packsize" onclick="modifierPackSize(${produit.id})" style="cursor:pointer; text-decoration:underline;">Packs de ${produit.packSize}</span>
+            <div class="stepper">
+                <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'packs', -1)">-</button>
+                <span id="p${produit.id}-packs">${produit.packs}</span>
+                <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'packs', 1)">+</button>
+            </div>
+        </div>` : '';
+
+        card.innerHTML = `
+        <h3>${produit.nom}</h3>
+        ${ligneStepperPacks}
+        <div class="stepper-row">
+            <span>${produit.packSize ? 'Bouteilles seules' : 'Unites'}</span>
+            <div class="stepper">
+                <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'unites', -1)">-</button>
+                <span id="p${produit.id}-unites">${produit.unites}</span>
+                <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'unites', 1)">+</button>
+            </div>
+        </div>
+        <div class="total-window">
+        <span class="total-label">Total restant</span>
+        <span class="total-value" id="p${produit.id}-total">0</span>
+        </div>
+        `;
+
+        return card;    
+    }
+    function genererOnglets() 
+    {
+        const tabsContainer = document.getElementById('tabs');
+        const categories = [...new Set(produits.map(p => p.categorie))];
+
+        const toutBtn = document.createElement('button');
+        toutBtn.className = 'tab active';
+        toutBtn.textContent = 'Tout';
+        toutBtn.onclick = () => filtrerCategorie('Tout', toutBtn);
+        tabsContainer.appendChild(toutBtn);
+
+        categories.forEach(cat => 
+        {
+            const btn = document.createElement('button');
+            btn.className = 'tab';
+            btn.textContent = cat;
+            btn.onclick = () => filtrerCategorie(cat, btn);
+            tabsContainer.appendChild(btn);
+        });
+    }
+    function filtrerCategorie(categorieChoisie, boutonClique) 
+    {
+        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+        boutonClique.classList.add('active');
+
+        document.querySelectorAll('.card, .category-label').forEach(el => 
+        {
+            const visible = categorieChoisie === 'Tout' || el.dataset.categorie === categorieChoisie;
+            el.classList.toggle('hidden', !visible);
+        }); 
+    }
+    // 3. Mise à jour des compteurs — modifierQuantite(), calculerTotal()
+    function modifierQuantite(id, champ, delta)
+    {
+        const produit = produits.find(p => p.id === id);
+        produit[champ] = Math.max(0, (produit[champ] || 0) + delta);
+
+        document.getElementById(`p${id}-${champ}`).textContent = produit[champ];
+        document.getElementById(`p${id}-total`).textContent = calculerTotal(produit);
+
+        mettreAJourProgression();
+        sauvegarder();
+    }
+
+    function calculerTotal(produit)
+    {
+        const packs = produit.packs || 0;
+        const packSize = produit.packSize || 0;
+        const unites = produit.unites || 0;
+        return packs * packSize + unites;
+    }
+
+    function modifierPackSize(id)
+    {
+        const produit = produits.find(p => p.id === id);
+        const spanPackSize = document.getElementById(`p${id}-packsize`);
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = produit.packSize;
+        input.style.cssText = 'width:60px; background:var(--bg); color:var(--text); border:1px solid var(--accent); border-radius:6px; padding:2px 6px; font-family:inherit; font-size:inherit;';
+
+        spanPackSize.replaceWith(input);
+        input.focus();
+        input.select();
+
+        function valider()
+        {
+            const nouvelleValeur = parseInt(input.value);
+
+            if (!nouvelleValeur || nouvelleValeur < 1)
+            {
+                input.replaceWith(spanPackSize);
+                return;
+            }
+
+            if (nouvelleValeur === produit.packSize)
+            {
+                input.replaceWith(spanPackSize);
+                return;
+            }
+
+            const confirme = window.confirm(`Changer les packs de ${produit.nom} de ${produit.packSize} à ${nouvelleValeur} ?`);
+
+            if (confirme)
+            {
+                produit.packSize = nouvelleValeur;
+                spanPackSize.textContent = `Packs de ${nouvelleValeur}`;
+                document.getElementById(`p${id}-total`).textContent = calculerTotal(produit);
+                sauvegarder();
+            }
+
+            input.replaceWith(spanPackSize);
+        }
+
+        input.addEventListener('blur', valider);
+        input.addEventListener('keydown', e =>
+        {
+            if (e.key === 'Enter') input.blur();
+            if (e.key === 'Escape') input.replaceWith(spanPackSize);
+        });
+    }
+    // 4. Progression — mettreAJourProgression()
+    function mettreAJourProgression()
+    {
+        const segs = document.querySelectorAll('.progress-seg');
+        let comptes = 0;
+        produits.forEach((p, i) =>
+        {
+            const fait = calculerTotal(p)>0;
+            if (fait) comptes++;
+            if (segs[i].classList.toggle('on',fait));
+        });
+        document.getElementById('progressTag').textContent = `${comptes} / ${produits.length} produits comptés`;
+
+
+    }
+
+    function generateProgressBar()
+    {
+        const barre =document.getElementById('progressBar');
+        barre.innerHTML = '';
+        produits.forEach(p => 
+        {
+            const seg = document.createElement('div');
+            seg.className = 'progress-seg';
+            barre.appendChild(seg);
+        });
+        document.getElementById('progressTag').textContent = '${comptes} / ${produits.length} produits comptés';
+       
+    }
+
+    // 5. Sauvegarde locale (expiration 7 jours) — sauvegarder(), chargerSiValide()
+    const UNE_SEMAINE = 7 * 24 * 60 * 60 * 1000;
+
+    function sauvegarder()
+    {
+        localStorage.setItem('stock_produits', JSON.stringify(produits));
+        localStorage.setItem('stock_date', Date.now());
+    }
+
+    function chargerSiValide()
+    {
+        const date = localStorage.getItem('stock_date');
+        if (date && Date.now() - date > UNE_SEMAINE)
+        {
+            localStorage.clear();
+            return;
+        }
+        const sauvegarde = localStorage.getItem('stock_produits');
+        if (sauvegarde) produits = JSON.parse(sauvegarde);
+    }
+
+    function remiseAZero()
+    {
+        const confirme = window.confirm('Remettre tout le comptage à zéro ? Cette action est irréversible.');
+
+        if (!confirme) return;
+
+        produits.forEach(p =>
+        {
+            p.packs = 0;
+            p.unites = 0;
+        });
+
+        localStorage.clear();
+        genererInterface();
+        genererBarreProgression();
+    }
+    // 6. Génération PDF — genererPDF()
+    function construirePDF()
+    {
+        const nom = window.prompt('Nom de la personne qui a compté :');
+        if (!nom || nom.trim() === '') return null;
+
+        const maintenant = new Date();
+        maintenant.setDate(maintenant.getDate() - 1);
+        const date = maintenant.toLocaleDateString('fr-BE', 
+        {
+            day:'2-digit', month:'2-digit', year:'numeric'
+        });
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // En-tête
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('Comptage de stock — Moonshine', 14, 18);
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(120);
+        doc.text(`Date de l'événement : ${date}`, 14, 26);
+        doc.text(`Compté par : ${nom.trim()}`, 14, 32);
+        doc.setTextColor(0);
+
+        doc.setDrawColor(200);
+        doc.line(14, 36, 196, 36);
+
+        // Disposition en 2 colonnes
+        const categories = [...new Set(produits.map(p => p.categorie))];
+        const colGauche = categories.slice(0, Math.ceil(categories.length / 2));
+        const colDroite = categories.slice(Math.ceil(categories.length / 2));
+
+        function ecrireColonne(listeCats, xDepart)
+        {
+            let y = 44;
+            listeCats.forEach(cat =>
+            {
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text(cat, xDepart, y);
+                y += 6;
+
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+
+                produits.filter(p => p.categorie === cat).forEach(p =>
+                {
+                    doc.text(p.nom, xDepart + 3, y);
+                    doc.text(String(calculerTotal(p)), xDepart + 85, y, { align:'right' });
+                    y += 5;
+                });
+
+                y += 4;
+            });
+        }
+
+        ecrireColonne(colGauche, 14);
+        ecrireColonne(colDroite, 108);
+
+        // Pied de page
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Généré le ${new Date().toLocaleDateString('fr-BE')} à ${new Date().toLocaleTimeString('fr-BE', {hour:'2-digit', minute:'2-digit'})}`, 14, 285);
+
+        return doc;
+    }
+
+    async function partager()
+    {
+        const doc = construirePDF();
+        if (!doc) return;
+
+        const blob = doc.output('blob');
+        const file = new File([blob], 'comptage-stock.pdf', { type:'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] }))
+        {
+            try
+            {
+                await navigator.share(
+                {
+                    files: [file],
+                    title: 'Comptage de stock',
+                    text: 'Rapport de comptage'
+                });
+            }
+            catch (e) {}
+        }
+        else
+        {
+            doc.save('comptage-stock.pdf');
+        }
+    }
+    // 7. Partage — partager()
+    // 8. Initialisation — appels exécutés au chargement
+    chargerSiValide();
+    generateProgressBar();
+    genererInterface();
+    genererOnglets();
+  </script>
+</body>
+</html>
