@@ -57,7 +57,7 @@
 
         .hidden
         {
-            display:none;
+            display:none !important;
         }
 
         *{ box-sizing:border-box;}
@@ -236,8 +236,126 @@
             font-size:0.95rem;
             margin-top:8px;
         }
-    </style> 
 
+        .btn-ajouter
+        {
+            background:transparent;
+            border:1px solid var(--muted);
+            color:var(--muted);
+            border-radius:20px;
+            padding:5px 12px;
+            font-size:0.8rem;
+            font-family:'Space Grotesk', sans-serif;
+            margin-left:10px;
+        }
+
+        .modal-overlay
+        {
+            position:fixed;
+            top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,0.7);
+            z-index:100;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .modal
+        {
+            background:var(--bg2);
+            border-radius:16px;
+            padding:24px;
+            width:90%;
+            max-width:360px;
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            border:1px solid rgba(255,255,255,0.08);
+        }
+
+        .modal h2
+        {
+            font-family:'Space Grotesk', sans-serif;
+            font-size:1.1rem;
+            margin:0 0 6px;
+        }
+
+        .modal label
+        {
+            font-size:0.78rem;
+            color:var(--muted);
+            text-transform:uppercase;
+            letter-spacing:0.06em;
+        }
+
+        .modal input, .modal select
+        {
+            background:var(--bg);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:8px;
+            padding:10px 12px;
+            color:var(--text);
+            font-family:'JetBrains Mono', monospace;
+            font-size:0.9rem;
+            width:100%;
+        }
+
+        .modal small
+        {
+            font-size:0.72rem;
+            color:var(--muted);
+            margin-top:-6px;
+        }
+
+        .modal-buttons
+        {
+            display:flex;
+            gap:10px;
+            margin-top:6px;
+        }
+
+        .modal-btn-annuler
+        {
+            flex:1;
+            padding:12px;
+            border-radius:10px;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:var(--muted);
+            font-family:'Space Grotesk', sans-serif;
+            font-weight:700;
+        }
+
+        .modal-btn-confirmer
+        {
+            flex:1;
+            padding:12px;
+            border-radius:10px;
+            border:none;
+            background:var(--cyan);
+            color:#06141F;
+            font-family:'Space Grotesk', sans-serif;
+            font-weight:700;
+        }
+        .step-val-input
+    {
+        width:40px;
+        text-align:center;
+        background:transparent;
+        border:none;
+        color:var(--text);
+        font-family:'JetBrains Mono', monospace;
+        font-size:0.92rem;
+        -moz-appearance:textfield;
+    }
+
+    .step-val-input::-webkit-outer-spin-button,
+    .step-val-input::-webkit-inner-spin-button
+{
+    -webkit-appearance:none;
+}
+    </style> 
+    </head>
     <body> 
 
         <header>
@@ -245,14 +363,37 @@
             <div id="progressTag">0 / 0 produits comptés</div>
             <div class="tabs" id="tabs"></div>
             <div id="progressBar"></div>
+            <button class="btn-ajouter" onclick="ouvrirModal()">+ Produit</button>
+             <div class="bottom-bar">
+            <button class="generate-btn" onclick="partager()">Générer PDF</button>
+            <button class="reset-btn" onclick="remiseAZero()">Remise à zéro</button>
+            </div>
+
+            <div id="modalAjout" class="modal-overlay hidden">
+            <div class="modal">
+            <h2>Ajouter un produit</h2>
+
+            <label>Nom du produit</label>
+            <input type="text" id="input-nom" placeholder="Ex: Perrier 33cl">
+
+            <label>Catégorie</label>
+            <select id="input-categorie"></select>
+
+            <label>Taille de pack</label>
+            <input type="number" id="input-packsize" placeholder="Ex: 24">
+            <small>Laisser vide pour les produits sans pack (cocktails, fûts...)</small>
+
+            <div class="modal-buttons">
+                <button class="modal-btn-annuler" onclick="fermerModal()">Annuler</button>
+                <button class="modal-btn-confirmer" onclick="confirmerAjoutProduit()">Ajouter</button>
+            </div>
+            </div>
+            </div>
         </header>
 
         <main id="cardList"></main>
 
-        <div class="bottom-bar">
-            <button class="generate-btn" onclick="partager()">Générer PDF</button>
-            <button class="reset-btn" onclick="remiseAZero()">Remise à zéro</button>
-        </div>
+       
         <script>
     // 1. Données — tableau "produits"
     let produits = [
@@ -353,7 +494,7 @@
             <span id="p${produit.id}-packsize" onclick="modifierPackSize(${produit.id})" style="cursor:pointer; text-decoration:underline;">Packs de ${produit.packSize}</span>
             <div class="stepper">
                 <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'packs', -1)">-</button>
-                <span id="p${produit.id}-packs">${produit.packs}</span>
+                <input type="number" class="step-val-input" id="p${produit.id}-packs" value="${produit.packs}" min="0" onchange="saisieDirecte(${produit.id}, 'packs', this.value)">
                 <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'packs', 1)">+</button>
             </div>
         </div>` : '';
@@ -365,7 +506,7 @@
             <span>${produit.packSize ? 'Bouteilles seules' : 'Unites'}</span>
             <div class="stepper">
                 <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'unites', -1)">-</button>
-                <span id="p${produit.id}-unites">${produit.unites}</span>
+                <input type="number" class="step-val-input" id="p${produit.id}-unites" value="${produit.unites}" min="0" onchange="saisieDirecte(${produit.id}, 'unites', this.value)">
                 <button class="step-btn" onclick="modifierQuantite(${produit.id}, 'unites', 1)">+</button>
             </div>
         </div>
@@ -414,7 +555,7 @@
         const produit = produits.find(p => p.id === id);
         produit[champ] = Math.max(0, (produit[champ] || 0) + delta);
 
-        document.getElementById(`p${id}-${champ}`).textContent = produit[champ];
+        document.getElementById(`p${id}-${champ}`).value = produit[champ];
         document.getElementById(`p${id}-total`).textContent = calculerTotal(produit);
 
         mettreAJourProgression();
@@ -478,6 +619,15 @@
             if (e.key === 'Enter') input.blur();
             if (e.key === 'Escape') input.replaceWith(spanPackSize);
         });
+    }
+    function saisieDirecte(id, champ, valeur)
+    {
+        const produit = produits.find(p => p.id === id);
+        produit[champ] = Math.max(0, parseInt(valeur) || 0);
+        document.getElementById(`p${id}-${champ}`).value = produit[champ];
+        document.getElementById(`p${id}-total`).textContent = calculerTotal(produit);
+        mettreAJourProgression();
+        sauvegarder();
     }
     // 4. Progression — mettreAJourProgression()
     function mettreAJourProgression()
@@ -597,7 +747,12 @@
 
                 produits.filter(p => p.categorie === cat).forEach(p =>
                 {
+                    const detail = p.packSize
+                        ? `${p.packs || 0} packs / ${p.unites || 0} u.`
+                        : `${p.unites || 0} u.`;
+
                     doc.text(p.nom, xDepart + 3, y);
+                    doc.text(detail, xDepart + 42, y, { align:'center' });
                     doc.text(String(calculerTotal(p)), xDepart + 85, y, { align:'right' });
                     y += 5;
                 });
@@ -643,7 +798,62 @@
             doc.save('comptage-stock.pdf');
         }
     }
-    // 7. Partage — partager()
+    // 7. Modal d'ajout de produit — ouvrirModal(), fermerModal(), confirmerAjoutProduit()
+    function ouvrirModal()
+    {
+        const select = document.getElementById('input-categorie');
+        select.innerHTML = '';
+        const categories = [...new Set(produits.map(p => p.categorie))];
+        categories.forEach(cat =>
+        {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+        });
+
+        document.getElementById('input-nom').value = '';
+        document.getElementById('input-packsize').value = '';
+        document.getElementById('modalAjout').classList.remove('hidden');
+    }
+
+    function fermerModal()
+    {
+        document.getElementById('modalAjout').classList.add('hidden');
+    }
+
+    function confirmerAjoutProduit()
+    {
+        const nom = document.getElementById('input-nom').value.trim();
+        const categorie = document.getElementById('input-categorie').value;
+        const packSizeVal = document.getElementById('input-packsize').value;
+
+        if (!nom)
+        {
+            alert('Le nom du produit est obligatoire.');
+            return;
+        }
+
+        const nouvelId = Math.max(...produits.map(p => p.id)) + 1;
+        const packSize = packSizeVal ? parseInt(packSizeVal) : undefined;
+
+        const nouveauProduit =
+        {
+            id: nouvelId,
+            nom: nom,
+            categorie: categorie,
+            packSize: packSize,
+            packs: 0,
+            unites: 0
+        };
+
+        produits.push(nouveauProduit);
+        sauvegarder();
+        fermerModal();
+        genererInterface();
+        genererOnglets();
+        genererBarreProgression();
+    }
     // 8. Initialisation — appels exécutés au chargement
     chargerSiValide();
     generateProgressBar();
